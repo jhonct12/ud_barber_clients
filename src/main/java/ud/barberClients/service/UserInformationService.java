@@ -25,7 +25,12 @@ public class UserInformationService {
     }
 
     public UserInformation userInformationByKey(String document) {
-        return entityManager.find(UserInformation.class, document);
+        UserInformation userInformation = entityManager.find(UserInformation.class, document);
+        if (userInformation == null){
+            return  null;
+        }else{
+            return new UserInformation(userInformation);
+        }
     }
 
     public UserInformation createUserInformation(UserInformation userInformation) throws ConflictException {
@@ -60,11 +65,10 @@ public class UserInformationService {
             if (userInformation.getDeviceId() != null) updateUserInformation.setDeviceId(userInformation.getDeviceId());
             try{
                 entityManager.merge(updateUserInformation);
+                return updateUserInformation;
             }catch (Exception e){
                 throw new ConflictException(NameReserved.SERVER_UPDATE, reason);
-            }
-            return updateUserInformation;
-        }
+            } }
     }
 
     public UserInformation deleteUserInformation(String document) throws NotFoundException, ConflictException {

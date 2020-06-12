@@ -12,10 +12,7 @@ import ud.barberClients.utils.nameReserved.NameReserved;
 
 import javax.ejb.Stateless;
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Stateless
 public class UserSessionService {
@@ -29,7 +26,25 @@ public class UserSessionService {
     }
 
     public UserSession userSessionByKey(KeyUserSession keyUserSession) {
-        return entityManager.find(UserSession.class, keyUserSession);
+        UserSession userSession = entityManager.find(UserSession.class, keyUserSession);
+        if (userSession == null){
+            return null;
+        }else{
+            return new UserSession(userSession);
+        }
+    }
+
+    public Boolean userSessionByKeyTry(KeyUserSession keyUserSession) throws ConflictException {
+        UserSession userSession = userSessionByKey(keyUserSession);
+        if (userSession != null){
+            Map<String, String> reason = new HashMap<>();
+            reason.put(NameReserved.COMPANY_ID, keyUserSession.getCompanyId());
+            reason.put(NameReserved.DOCUMENT, keyUserSession.getDocument());
+            reason.put(NameReserved.USERNAME, keyUserSession.getUsername());
+            throw new ConflictException(NameReserved.SERVER_FIND, reason);
+        }else{
+            return true;
+        }
     }
 
     public UserSession userByUsername(String username) throws NotFoundException {
@@ -47,7 +62,38 @@ public class UserSessionService {
             }
     }
 
-    public UserSession createUserSession(UserSession userSession) throws ConflictException {
+    public Boolean userByUsernameTry(String username) throws ConflictException {
+        TypedQuery<UserSession> q = entityManager.createNamedQuery(UserSession.FIND_BY_USERNAME, UserSession.class)
+                .setParameter(NameReserved.USERNAME, username)
+                .setMaxResults(1);
+
+        UserSession userSession = q.getSingleResult();
+        if (userSession != null){
+            Map<String, String> reason = new HashMap<>();
+            reason.put(NameReserved.USERNAME, username);
+            throw new ConflictException(NameReserved.SERVER_FIND, reason);
+        }else{
+            return true;
+        }
+    }
+
+
+    //1- key
+    //2- username
+    public void verificationOptions(UserSession userSession, String username, ArrayList<Integer> option) throws ConflictException {
+        for (Integer integer : option) {
+            if (integer.equals(1)){
+                userSessionByKeyTry(new KeyUserSession(userSession.getCompanyId(), userSession.getDocument(), userSession.getUsername()));
+            }else if(integer.equals(2)){
+                userByUsernameTry(username);
+            }
+        }
+    }
+
+    public UserSession createUserSession(UserSession userSession, ArrayList<Integer> option) throws ConflictException {
+        if (!option.isEmpty()){
+            verificationOptions(null, userSession.getUsername(), option);
+        }
         userSession.setPassword(Cipher.encryptString(userSession.getPassword()));
         try{
             entityManager.persist(userSession);
@@ -60,6 +106,7 @@ public class UserSessionService {
     }
 
     public UserSession updateUserSession(UserSession userSession) throws NotFoundException, ConflictException {
+        verificationOptions(null, userSession.getUsername(), new ArrayList<>(Arrays.asList(2)));
         Map<String, String> reason = new HashMap<>();
         reason.put(NameReserved.COMPANY_ID, userSession.getCompanyId());
         reason.put(NameReserved.DOCUMENT, userSession.getDocument());

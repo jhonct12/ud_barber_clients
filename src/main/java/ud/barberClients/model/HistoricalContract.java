@@ -8,12 +8,10 @@ import javax.persistence.*;
 @IdClass(KeyHistoricalWithoutSequence.class)
 @Table(name = "historicalContract")
 @NamedQueries({
-        @NamedQuery(name = HistoricalContract.FIND_ALL, query = "SELECT h FROM HistoricalContract h"),
         @NamedQuery(name = HistoricalContract.FIND_BY_COM_INI_FIN_DATE, query = "SELECT h FROM HistoricalContract h where h.companyId = :companyId and h.document = :document and h.initialDate <= :finalDate and h.finalDate >= :initialDate")
 })
 public class HistoricalContract {
 
-    public static final String FIND_ALL = "HistoricalContract.findAll";
     public static final String FIND_BY_COM_INI_FIN_DATE = "HistoricalContract.findByComIniFinDate";
 
     @Id
